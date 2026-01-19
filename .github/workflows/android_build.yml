@@ -21,6 +21,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # এই নতুন স্টেপটি Gradle 9 কে সরিয়ে Gradle 8.7 ইন্সটল করবে
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -34,11 +40,8 @@ jobs:
       - name: Add Android Platform
         run: cordova platform add android
 
-      # এই ধাপে ফিক্স করা হয়েছে। আমরা নির্দিষ্ট করে Gradle 8.7 ব্যবহার করতে বলছি।
       - name: Build APK
         run: cordova build android --debug
-        env:
-          CORDOVA_ANDROID_GRADLE_DISTRIBUTION_URL: "https://services.gradle.org/distributions/gradle-8.7-all.zip"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
