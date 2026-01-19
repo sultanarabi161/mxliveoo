@@ -13,13 +13,9 @@
   "author": "MX Dev",
   "license": "Apache-2.0",
   "dependencies": {
-    "cordova-android": "^12.0.0",
-    "cordova-plugin-whitelist": "^1.3.5"
+    "cordova-android": "^12.0.0"
   },
   "cordova": {
-    "plugins": {
-      "cordova-plugin-whitelist": {}
-    },
     "platforms": [
       "android"
     ]
