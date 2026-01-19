@@ -15,14 +15,17 @@ jobs:
         with:
           node-version: 18
 
+      # Android SDK Tools এখন Java 17 ছাড়া চলে না
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 8512546
 
       - name: Install Cordova & Dependencies
         run: |
