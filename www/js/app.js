@@ -1,7 +1,7 @@
 // কনফিগারেশন
-const M3U_URL = "https://cors-anywhere.herokuapp.com/https://m3u.ch/pl/b3499faa747f2cd4597756dbb5ac2336_e78e8c1a1cebb153599e2d938ea41a50.m3u"; 
+const M3U_URL = "https://m3u.ch/pl/b3499faa747f2cd4597756dbb5ac2336_e78e8c1a1cebb153599e2d938ea41a50.m3u"; 
 // দ্রষ্টব্য: CORS সমস্যা এড়াতে 'cors-anywhere' বা আপনার নিজস্ব প্রক্সি ব্যবহার করা ভালো। অ্যাপে বিল্ড করার পর সরাসরি লিংকেও কাজ করতে পারে যদি হোস্টিং পারমিশন দেয়।
-const NOTICE_JSON_URL = "https://raw.githubusercontent.com/আপনার_গিটহাব_ইউজারনেম/mxliveoo/main/notice.json"; 
+const NOTICE_JSON_URL = "https://raw.githubusercontent.com/sultanarabi161/mxliveoo/refs/heads/main/notice.json"; 
 
 let allChannels = [];
 let currentCategory = "All";
