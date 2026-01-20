@@ -3,74 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mxliveoo</title>
+    <title>mxliveoo Premium</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
     <header>
         <div class="top-bar">
-            <div class="logo">
-                <img src="../logo.png" alt="MX" onerror="this.style.display='none'"> <span>mxliveoo</span>
-            </div>
+            <div class="logo">MXLIVEOO</div>
             <div class="actions">
-                <button id="searchBtn"><i class="fas fa-search"></i></button>
-                <button id="infoBtn"><i class="fas fa-info-circle"></i></button>
+                <i class="fas fa-search" id="searchBtn"></i>
+                <i class="fas fa-info-circle" onclick="alert('Dev: Sultan Muhammad Arabi\nApp: mxliveoo v1.0')"></i>
             </div>
-        </div>
-        
-        <div class="marquee-container">
-            <div class="marquee-text" id="noticeMsg">Loading notice...</div>
         </div>
 
-        <div class="search-bar" id="searchBar" style="display:none;">
-            <input type="text" id="searchInput" placeholder="Search channels...">
+        <div class="marquee-container">
+            <marquee id="noticeMsg" scrollamount="6">Connecting to server...</marquee>
+        </div>
+
+        <div id="searchBox" style="display:none; padding:10px; background:#222;">
+            <input type="text" id="searchInput" placeholder="Search Channel..." style="width:100%; padding:10px; border-radius:5px; border:none; outline:none;">
         </div>
 
         <div class="categories" id="categoryList">
-            <button class="active" onclick="filterCategory('All')">All</button>
             </div>
     </header>
 
     <main id="channelGrid">
-        <div class="loading">Loading Channels...</div>
+        <div style="grid-column: span 3; text-align: center; margin-top: 50px; color: #666;">
+            <i class="fas fa-circle-notch fa-spin fa-2x"></i><br><br>Loading Channels...
+        </div>
     </main>
 
     <div id="playerScreen" class="player-overlay">
-        <div class="player-header">
-            <button onclick="closePlayer()"><i class="fas fa-arrow-left"></i> Back</button>
-            <span id="playingTitle">Channel Name</span>
+        <div class="video-wrapper">
+            <button class="close-btn" onclick="closePlayer()"><i class="fas fa-chevron-down"></i></button>
+            <video id="videoPlayer" controls playsinline poster="img/loader.png"></video>
         </div>
         
-        <div class="video-container">
-            <video id="videoPlayer" controls autoplay></video>
-        </div>
-
-        <div class="telegram-banner">
-            <a href="https://t.me/YourTelegramChannel" target="_blank">
-                <i class="fab fa-telegram-plane"></i> Join Telegram Channel
+        <div class="player-details">
+            <span class="channel-title" id="playingTitle">Channel Name</span>
+            
+            <a href="https://t.me/YourChannel" class="telegram-btn">
+                <i class="fab fa-telegram-plane"></i> JOIN TELEGRAM
             </a>
-        </div>
 
-        <div class="related-section">
-            <h3>Related Channels</h3>
+            <h3 style="color:#888; margin-bottom:10px;">More in this category</h3>
             <div class="related-grid" id="relatedGrid"></div>
         </div>
     </div>
 
-    <div id="infoModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeInfo()">&times;</span>
-            <h2>App Info</h2>
-            <p><strong>App:</strong> mxliveoo v1.0</p>
-            <p><strong>Dev:</strong> MX Developer</p>
-            <p>This app supports HLS streaming with auto-update capability.</p>
-        </div>
-    </div>
-
     <script src="cordova.js"></script>
-    <script src="js/app.js"></script>
+    <script>
+        const M3U_URL = "https://m3u.ch/pl/b3499faa747f2cd4597756dbb5ac2336_e78e8c1a1cebb153599e2d938ea41a50.m3u";
+        // JSON নোটিশের জন্য আপনার গিটহাব raw লিংক দিন
+        const NOTICE_URL = "https://raw.githubusercontent.com/sultanarabi161/mxliveoo/main/notice.json"; 
+
+        let allChannels = [];
+        let hls = null;
+
+        document.addEventListener('deviceready', init, false);
+        window.onload = init; // For browser testing
+
+        function init() {
+            fetchNotice();
+            loadM3U();
+
+            document.getElementById('searchBtn').onclick = () => {
+                const box = document.getElementById('searchBox');
+                box.style.display = box.style.display === 'none' ? 'block' : 'none';
+                if(box.style.display === 'block') document.getElementById('searchInput').focus();
+            };
+
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                renderChannels(e.target.value, 'All'); // Search global
+            });
+        }
+
+        // Notice Fetch
+        async function fetchNotice() {
+            try {
+                const res = await fetch(NOTICE_URL);
+                const data = await res.json();
+                if(data.message) document.getElementById('noticeMsg').innerText = data.message;
+            } catch(e) { console.log(e); }
+        }
+
+        // Load & Parse M3U
+        async function loadM3U() {
+            try {
+                // CORS সমস্যা এড়াতে চাইলে 'https://api.allorigins.win/raw?url=' ব্যবহার করতে পারেন
+                const res = await fetch(M3U_URL);
+                const text = await res.text();
+                
+                const lines = text.split('\n');
+                let current = null;
+
+                lines.forEach(line => {
+                    line = line.trim();
+                    if(line.startsWith('#EXTINF')) {
+                        const logo = line.match(/tvg-logo="([^"]*)"/)?.[1] || 'https://via.placeholder.com/150?text=TV';
+                        const group = line.match(/group-title="([^"]*)"/)?.[1] || 'Others';
+                        const name = line.split(',').pop().trim();
+                        current = { name, logo, group };
+                    } else if(line.startsWith('http') && current) {
+                        current.url = line;
+                        allChannels.push(current);
+                        current = null;
+                    }
+                });
+
+                setupCategories();
+                renderChannels();
+
+            } catch(e) {
+                document.getElementById('channelGrid').innerHTML = '<p>Error loading channels. Check Connection.</p>';
+            }
+        }
+
+        function setupCategories() {
+            const groups = ['All', ...new Set(allChannels.map(c => c.group))].slice(0, 15); // Limit categories
+            const container = document.getElementById('categoryList');
+            container.innerHTML = groups.map(g => 
+                `<button onclick="changeCategory('${g}')" class="${g==='All'?'active':''}">${g}</button>`
+            ).join('');
+        }
+
+        let activeCategory = 'All';
+
+        function changeCategory(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.categories button').forEach(b => {
+                b.classList.remove('active');
+                if(b.innerText === cat) b.classList.add('active');
+            });
+            renderChannels();
+        }
+
+        function renderChannels(search = '', category = activeCategory) {
+            const grid = document.getElementById('channelGrid');
+            const filtered = allChannels.filter(ch => {
+                const matchCat = category === 'All' || ch.group === category;
+                const matchSearch = ch.name.toLowerCase().includes(search.toLowerCase());
+                return matchCat && matchSearch;
+            });
+
+            grid.innerHTML = filtered.map(ch => `
+                <div class="channel-card" onclick="playChannel('${ch.url}', '${ch.name.replace(/'/g, "\\'")}', '${ch.group.replace(/'/g, "\\'")}')">
+                    <div class="img-container">
+                        <img src="${ch.logo}" loading="lazy" onerror="this.src='https://via.placeholder.com/100?text=TV'">
+                    </div>
+                    <div class="channel-info">
+                        <p>${ch.name}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Play Logic
+        window.playChannel = function(url, name, group) {
+            const screen = document.getElementById('playerScreen');
+            const video = document.getElementById('videoPlayer');
+            
+            document.getElementById('playingTitle').innerText = name;
+            screen.style.display = 'block';
+
+            if(Hls.isSupported()) {
+                if(hls) hls.destroy();
+                hls = new Hls({ debug: false });
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if(data.fatal) {
+                        hls.startLoad(); // Retry on error
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.play();
+            }
+
+            // Render Related
+            const related = allChannels.filter(c => c.group === group && c.name !== name).slice(0, 6);
+            document.getElementById('relatedGrid').innerHTML = related.map(ch => `
+                <div class="channel-card" onclick="playChannel('${ch.url}', '${ch.name.replace(/'/g, "\\'")}', '${ch.group.replace(/'/g, "\\'")}')">
+                    <div class="img-container">
+                        <img src="${ch.logo}" style="height:60px;">
+                    </div>
+                    <div class="channel-info"><p>${ch.name}</p></div>
+                </div>
+            `).join('');
+        }
+
+        window.closePlayer = function() {
+            document.getElementById('playerScreen').style.display = 'none';
+            const video = document.getElementById('videoPlayer');
+            video.pause();
+            video.src = "";
+            if(hls) hls.destroy();
+        }
+    </script>
 </body>
 </html>
