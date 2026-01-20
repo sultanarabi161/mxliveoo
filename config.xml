@@ -1,14 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="com.mxliveoo.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>mxliveoo</name>
-    <description>Premium Live TV App</description>
+    <description>Premium Live TV</description>
     <author email="dev@mxliveoo.com" href="http://mxliveoo.com">MX Dev</author>
     <content src="index.html" />
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
     <allow-navigation href="*" />
-    
     <platform name="android">
         <icon src="logo.png" />
         <preference name="AndroidXEnabled" value="true" />
