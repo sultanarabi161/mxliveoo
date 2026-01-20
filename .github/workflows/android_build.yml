@@ -21,7 +21,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # এই নতুন স্টেপটি Gradle 9 কে সরিয়ে Gradle 8.7 ইন্সটল করবে
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -31,6 +30,10 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 8512546
+
+      # এই নতুন স্টেপটি আপনার মিসিং টুলস ইনস্টল করে দিবে
+      - name: Install Android Build Tools
+        run: sdkmanager "build-tools;33.0.2" "platforms;android-33"
 
       - name: Install Cordova & Dependencies
         run: |
