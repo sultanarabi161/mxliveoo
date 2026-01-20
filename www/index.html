@@ -2,208 +2,259 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mxliveoo Premium</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>mxliveoo</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/clappr-playback-rate-plugin@latest/dist/clappr-playback-rate-plugin.min.js"></script>
 </head>
 <body>
+
+    <div id="playerContainer">
+        <div class="player-wrapper">
+            <div id="clappr-player"></div>
+        </div>
+        <div class="player-info">
+            <div style="display:flex; justify-content:space-between;">
+                <b id="playingTitle" style="font-size:1.1rem;">Select a Channel</b>
+                <button onclick="closePlayer()" style="background:none; border:none; color:#aaa;"><i class="fas fa-times"></i> Close</button>
+            </div>
+            
+            <div class="player-actions">
+                <a href="https://t.me/YourTelegram" target="_blank" class="btn-action btn-telegram">
+                    <i class="fab fa-telegram-plane"></i> Join Telegram
+                </a>
+                <button class="btn-action" onclick="togglePiP()">
+                    <i class="fas fa-external-link-alt"></i> PiP Mode
+                </button>
+            </div>
+        </div>
+    </div>
 
     <header>
         <div class="top-bar">
             <div class="logo">MXLIVEOO</div>
             <div class="actions">
-                <i class="fas fa-search" id="searchBtn"></i>
-                <i class="fas fa-info-circle" onclick="alert('Dev: Sultan Muhammad Arabi\nApp: mxliveoo v1.0')"></i>
+                <i class="fas fa-search" onclick="toggleSearch()"></i>
+                <i class="fas fa-sync-alt" onclick="location.reload()"></i>
             </div>
         </div>
-
-        <div class="marquee-container">
-            <marquee id="noticeMsg" scrollamount="6">Connecting to server...</marquee>
+        
+        <div class="marquee-box">
+            <marquee id="noticeMsg">Loading System...</marquee>
         </div>
 
-        <div id="searchBox" style="display:none; padding:10px; background:#222;">
-            <input type="text" id="searchInput" placeholder="Search Channel..." style="width:100%; padding:10px; border-radius:5px; border:none; outline:none;">
+        <div id="searchBar" style="display:none; padding:10px; background:#222;">
+            <input type="text" id="searchInput" placeholder="Search..." style="width:100%; padding:8px; border:none; border-radius:4px;">
         </div>
 
-        <div class="categories" id="categoryList">
-            </div>
+        <div class="cat-scroll" id="catList"></div>
     </header>
 
-    <main id="channelGrid">
-        <div style="grid-column: span 3; text-align: center; margin-top: 50px; color: #666;">
-            <i class="fas fa-circle-notch fa-spin fa-2x"></i><br><br>Loading Channels...
+    <main>
+        <div id="channelGrid" class="grid-container">
+            <div style="grid-column:span 3; text-align:center; padding:20px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading Channels...
+            </div>
         </div>
     </main>
 
-    <div id="playerScreen" class="player-overlay">
-        <div class="video-wrapper">
-            <button class="close-btn" onclick="closePlayer()"><i class="fas fa-chevron-down"></i></button>
-            <video id="videoPlayer" controls playsinline poster="img/loader.png"></video>
-        </div>
-        
-        <div class="player-details">
-            <span class="channel-title" id="playingTitle">Channel Name</span>
-            
-            <a href="https://t.me/YourChannel" class="telegram-btn">
-                <i class="fab fa-telegram-plane"></i> JOIN TELEGRAM
-            </a>
-
-            <h3 style="color:#888; margin-bottom:10px;">More in this category</h3>
-            <div class="related-grid" id="relatedGrid"></div>
-        </div>
-    </div>
-
     <script src="cordova.js"></script>
     <script>
+        // কনফিগারেশন
         const M3U_URL = "https://m3u.ch/pl/b3499faa747f2cd4597756dbb5ac2336_e78e8c1a1cebb153599e2d938ea41a50.m3u";
-        // JSON নোটিশের জন্য আপনার গিটহাব raw লিংক দিন
-        const NOTICE_URL = "https://raw.githubusercontent.com/sultanarabi161/mxliveoo/main/notice.json"; 
+        const NOTICE_URL = "https://raw.githubusercontent.com/sultanarabi161/mxliveoo/main/notice.json";
 
         let allChannels = [];
-        let hls = null;
+        let player = null;
+        let activeCat = 'All';
 
         document.addEventListener('deviceready', init, false);
-        window.onload = init; // For browser testing
+        window.onload = init; 
 
         function init() {
             fetchNotice();
-            loadM3U();
-
-            document.getElementById('searchBtn').onclick = () => {
-                const box = document.getElementById('searchBox');
-                box.style.display = box.style.display === 'none' ? 'block' : 'none';
-                if(box.style.display === 'block') document.getElementById('searchInput').focus();
-            };
-
+            loadChannels();
+            
             document.getElementById('searchInput').addEventListener('input', (e) => {
-                renderChannels(e.target.value, 'All'); // Search global
+                renderGrid(e.target.value);
             });
         }
 
-        // Notice Fetch
         async function fetchNotice() {
             try {
-                const res = await fetch(NOTICE_URL);
-                const data = await res.json();
+                const req = await fetch(NOTICE_URL);
+                const data = await req.json();
                 if(data.message) document.getElementById('noticeMsg').innerText = data.message;
-            } catch(e) { console.log(e); }
+            } catch(e) {}
         }
 
-        // Load & Parse M3U
-        async function loadM3U() {
+        async function loadChannels() {
             try {
-                // CORS সমস্যা এড়াতে চাইলে 'https://api.allorigins.win/raw?url=' ব্যবহার করতে পারেন
-                const res = await fetch(M3U_URL);
-                const text = await res.text();
-                
-                const lines = text.split('\n');
-                let current = null;
-
-                lines.forEach(line => {
-                    line = line.trim();
-                    if(line.startsWith('#EXTINF')) {
-                        const logo = line.match(/tvg-logo="([^"]*)"/)?.[1] || 'https://via.placeholder.com/150?text=TV';
-                        const group = line.match(/group-title="([^"]*)"/)?.[1] || 'Others';
-                        const name = line.split(',').pop().trim();
-                        current = { name, logo, group };
-                    } else if(line.startsWith('http') && current) {
-                        current.url = line;
-                        allChannels.push(current);
-                        current = null;
-                    }
-                });
-
-                setupCategories();
-                renderChannels();
-
+                const req = await fetch(M3U_URL);
+                const text = await req.text();
+                parseM3U(text);
             } catch(e) {
-                document.getElementById('channelGrid').innerHTML = '<p>Error loading channels. Check Connection.</p>';
+                document.getElementById('channelGrid').innerHTML = '<p style="color:red; text-align:center; grid-column:span 3;">Failed to load channels.</p>';
             }
+        }
+
+        // ফিক্সড: M3U পার্সিং লজিক (ডাবল চ্যানেল ফিক্স)
+        function parseM3U(data) {
+            allChannels = []; // অ্যারে ক্লিয়ার করা হলো যাতে ডুপ্লিকেট না হয়
+            const lines = data.split('\n');
+            let tempCh = null;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                if (line.startsWith('#EXTINF')) {
+                    // লোগো খোঁজা
+                    const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+                    const logo = logoMatch ? logoMatch[1] : 'img/default.png';
+
+                    // গ্রুপ খোঁজা
+                    const groupMatch = line.match(/group-title="([^"]*)"/);
+                    const group = groupMatch ? groupMatch[1] : 'Others';
+
+                    // নাম খোঁজা (কমা এর পরের অংশ)
+                    let name = line.split(',').pop().trim();
+
+                    tempCh = { name, logo, group };
+                } else if (line.startsWith('http')) {
+                    if (tempCh) {
+                        tempCh.url = line;
+                        allChannels.push(tempCh);
+                        tempCh = null; // রিসেট
+                    }
+                }
+            });
+
+            setupCategories();
+            renderGrid();
         }
 
         function setupCategories() {
-            const groups = ['All', ...new Set(allChannels.map(c => c.group))].slice(0, 15); // Limit categories
-            const container = document.getElementById('categoryList');
-            container.innerHTML = groups.map(g => 
-                `<button onclick="changeCategory('${g}')" class="${g==='All'?'active':''}">${g}</button>`
+            const categories = ['All', ...new Set(allChannels.map(c => c.group))];
+            const catContainer = document.getElementById('catList');
+            
+            catContainer.innerHTML = categories.map(cat => 
+                `<button class="cat-btn ${cat === 'All' ? 'active' : ''}" onclick="filterCat('${cat}')">${cat}</button>`
             ).join('');
         }
 
-        let activeCategory = 'All';
-
-        function changeCategory(cat) {
-            activeCategory = cat;
-            document.querySelectorAll('.categories button').forEach(b => {
-                b.classList.remove('active');
-                if(b.innerText === cat) b.classList.add('active');
+        window.filterCat = function(cat) {
+            activeCat = cat;
+            // বাটন স্টাইল আপডেট
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText === cat) btn.classList.add('active');
             });
-            renderChannels();
+            renderGrid();
         }
 
-        function renderChannels(search = '', category = activeCategory) {
+        function renderGrid(search = "") {
             const grid = document.getElementById('channelGrid');
+            grid.innerHTML = "";
+
             const filtered = allChannels.filter(ch => {
-                const matchCat = category === 'All' || ch.group === category;
-                const matchSearch = ch.name.toLowerCase().includes(search.toLowerCase());
-                return matchCat && matchSearch;
+                const inCat = activeCat === 'All' || ch.group === activeCat;
+                const inSearch = ch.name.toLowerCase().includes(search.toLowerCase());
+                return inCat && inSearch;
             });
 
-            grid.innerHTML = filtered.map(ch => `
-                <div class="channel-card" onclick="playChannel('${ch.url}', '${ch.name.replace(/'/g, "\\'")}', '${ch.group.replace(/'/g, "\\'")}')">
-                    <div class="img-container">
-                        <img src="${ch.logo}" loading="lazy" onerror="this.src='https://via.placeholder.com/100?text=TV'">
-                    </div>
-                    <div class="channel-info">
-                        <p>${ch.name}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Play Logic
-        window.playChannel = function(url, name, group) {
-            const screen = document.getElementById('playerScreen');
-            const video = document.getElementById('videoPlayer');
-            
-            document.getElementById('playingTitle').innerText = name;
-            screen.style.display = 'block';
-
-            if(Hls.isSupported()) {
-                if(hls) hls.destroy();
-                hls = new Hls({ debug: false });
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if(data.fatal) {
-                        hls.startLoad(); // Retry on error
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-                video.play();
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p style="text-align:center; grid-column:span 3;">No Channels Found</p>';
+                return;
             }
 
-            // Render Related
-            const related = allChannels.filter(c => c.group === group && c.name !== name).slice(0, 6);
-            document.getElementById('relatedGrid').innerHTML = related.map(ch => `
-                <div class="channel-card" onclick="playChannel('${ch.url}', '${ch.name.replace(/'/g, "\\'")}', '${ch.group.replace(/'/g, "\\'")}')">
-                    <div class="img-container">
-                        <img src="${ch.logo}" style="height:60px;">
+            // ব্যাচ রেন্ডারিং (পারফরম্যান্স এর জন্য)
+            let html = "";
+            filtered.forEach(ch => {
+                // সিঙ্গেল কোট বা বিশেষ ক্যারেক্টার এস্কেপ করা
+                const safeName = ch.name.replace(/'/g, "\\'");
+                const safeUrl = ch.url; 
+                
+                html += `
+                <div class="channel-card" onclick="startPlayer('${safeUrl}', '${safeName}')">
+                    <div class="img-box">
+                        <img src="${ch.logo}" loading="lazy" onerror="this.src='https://via.placeholder.com/100?text=MX'">
                     </div>
-                    <div class="channel-info"><p>${ch.name}</p></div>
-                </div>
-            `).join('');
+                    <div class="card-title">${ch.name}</div>
+                </div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        // --- CLAPPR PLAYER SETUP ---
+        window.startPlayer = function(url, name) {
+            // প্লেয়ার সেকশন দেখান
+            document.getElementById('playerContainer').style.display = 'block';
+            document.getElementById('playingTitle').innerText = name;
+            window.scrollTo(0,0); // পেজের উপরে যান
+
+            // আগের প্লেয়ার থাকলে ধ্বংস করুন
+            if (player) {
+                player.destroy();
+                player = null;
+            }
+
+            // নতুন Clappr প্লেয়ার তৈরি
+            player = new Clappr.Player({
+                source: url,
+                parentId: "#clappr-player",
+                width: '100%',
+                height: '100%',
+                autoPlay: true,
+                plugins: [ClapprPlaybackRatePlugin],
+                playback: {
+                    playInline: true, // আইফোনের জন্য
+                    recycleVideo: true,
+                },
+                playbackRateConfig: {
+                    defaultValue: '1.0',
+                    options: [
+                        {value: '0.5', label: '0.5x'},
+                        {value: '1.0', label: '1x'},
+                        {value: '1.5', label: '1.5x'},
+                        {value: '2.0', label: '2x'},
+                    ]
+                }
+            });
         }
 
         window.closePlayer = function() {
-            document.getElementById('playerScreen').style.display = 'none';
-            const video = document.getElementById('videoPlayer');
-            video.pause();
-            video.src = "";
-            if(hls) hls.destroy();
+            if(player) {
+                player.stop();
+                player.destroy();
+                player = null;
+            }
+            document.getElementById('playerContainer').style.display = 'none';
+        }
+
+        // PiP (Picture in Picture) Logic
+        window.togglePiP = function() {
+            const videoElement = document.querySelector('video');
+            if (videoElement) {
+                if (document.pictureInPictureElement) {
+                    document.exitPictureInPicture();
+                } else if (document.pictureInPictureEnabled) {
+                    videoElement.requestPictureInPicture();
+                } else {
+                    alert("PiP not supported on this device/webview.");
+                }
+            } else {
+                alert("Play a video first!");
+            }
+        }
+
+        window.toggleSearch = function() {
+            const bar = document.getElementById('searchBar');
+            bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+            if(bar.style.display === 'block') document.getElementById('searchInput').focus();
         }
     </script>
 </body>
